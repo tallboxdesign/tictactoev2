@@ -1,0 +1,2642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>5x5 Tic-Tac-Toe - YONI vs TATI</title>
+  <!-- PeerJS for WebRTC peer-to-peer connections -->
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
+    }
+    #info {
+      position: absolute;
+      top: 10px;
+      width: 100%;
+      text-align: center;
+      color: #333;
+      font-size: 18px;
+      z-index: 100;
+      pointer-events: none;
+    }
+    #gameStatus {
+      position: absolute;
+      bottom: 20px;
+      width: 100%;
+      text-align: center;
+      color: #333;
+      font-size: 24px;
+      font-weight: bold;
+      z-index: 100;
+      pointer-events: none;
+    }
+    #resetButton {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      z-index: 100;
+      display: none; /* Hidden by default, shown when appropriate */
+    }
+    #resetButton:hover {
+      background-color: #45a049;
+    }
+    #scoreBoard {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 100;
+      font-size: 16px;
+    }
+    #mathModal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: 200;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+      max-width: 500px;
+      width: 90%;
+    }
+    #answerInput {
+      margin: 20px 0;
+      padding: 10px;
+      font-size: 18px;
+      width: 100px;
+    }
+    .btn {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background-color: #45a049;
+    }
+    #mathQuestion {
+      font-size: 24px;
+      font-weight: bold;
+      margin: 20px 0;
+      min-height: 60px;
+    }
+    #playerSelector {
+      position: absolute;
+      top: 110px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 100;
+      text-align: center;
+      font-size: 16px;
+    }
+    .player-option {
+      display: inline-block;
+      margin: 0 10px;
+      cursor: pointer;
+    }
+    .player-option input {
+      margin-right: 5px;
+    }
+    .confetti-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 90;
+      pointer-events: none;
+    }
+    
+    /* Audio controls */
+    #audioControls {
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 100;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+    }
+    
+    #audioControls label {
+      margin-right: 8px;
+    }
+    
+    /* Mode selector styles */
+    #modeSelector {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      flex-wrap: wrap;
+    }
+    
+    .mode-card {
+      background-color: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 10px;
+      width: 300px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+    
+    .mode-card:hover {
+      transform: scale(1.05);
+    }
+    
+    .mode-icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    
+    /* Multiplayer setup styles */
+    #multiplayerSetup {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      flex-direction: column;
+    }
+    
+    /* AI mode setup styles */
+    #aiSetup {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      flex-direction: column;
+    }
+    
+    .ai-difficulty-card {
+      background-color: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 10px;
+      width: 250px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+    
+    .ai-difficulty-card:hover {
+      transform: scale(1.05);
+    }
+    
+    .ai-icon {
+      font-size: 36px;
+      margin-bottom: 10px;
+    }
+    
+    .setup-card {
+      background-color: white;
+      border-radius: 10px;
+      padding: 20px;
+      width: 400px;
+      text-align: center;
+    }
+    
+    .tabs {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    
+    .tab {
+      padding: 10px 20px;
+      background-color: #ddd;
+      cursor: pointer;
+      border-radius: 5px 5px 0 0;
+      margin: 0 5px;
+    }
+    
+    .tab.active {
+      background-color: #4CAF50;
+      color: white;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    #gameIdDisplay {
+      font-size: 24px;
+      padding: 10px;
+      background-color: #f0f0f0;
+      border-radius: 5px;
+      margin: 10px 0;
+      word-break: break-all;
+    }
+    
+    #copyButton {
+      padding: 5px 10px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    
+    #connectionStatus {
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 90;
+      font-size: 14px;
+      display: none;
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+    
+    .status-connecting {
+      background-color: orange;
+    }
+    
+    .status-connected {
+      background-color: green;
+    }
+    
+    .status-disconnected {
+      background-color: red;
+    }
+    
+    #waitingMessage {
+      font-size: 20px;
+      margin: 20px 0;
+      color: #666;
+    }
+    
+    /* Lobby UI for multiplayer */
+    #lobby {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(255,255,255,0.9);
+      padding: 20px;
+      border-radius: 5px;
+      z-index: 1100;
+      text-align: center;
+    }
+    
+    /* Chat container styles */
+    #chatContainer {
+      position: absolute;
+      bottom: 80px;
+      right: 20px;
+      width: 300px;
+      background-color: rgba(255, 255, 255, 0.9);
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      z-index: 150;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      display: none; /* Initially hidden, shown only in multiplayer mode */
+    }
+    
+    #chatHeader {
+      background-color: #4CAF50;
+      color: white;
+      padding: 8px 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    #chatMessages {
+      height: 200px;
+      overflow-y: auto;
+      padding: 10px;
+      background-color: #f9f9f9;
+    }
+    
+    .message {
+      margin-bottom: 8px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      max-width: 85%;
+      word-wrap: break-word;
+    }
+    
+    .message-tati {
+      background-color: #ffdddd;
+      align-self: flex-start;
+      margin-right: auto;
+    }
+    
+    .message-yoni {
+      background-color: #ddeeff;
+      align-self: flex-end;
+      margin-left: auto;
+    }
+    
+    .message-player {
+      font-weight: bold;
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+    
+    .message-tati .message-player {
+      color: #cc0000;
+    }
+    
+    .message-yoni .message-player {
+      color: #0066cc;
+    }
+    
+    .message-content {
+      font-size: 14px;
+    }
+    
+    #chatInput {
+      display: flex;
+      border-top: 1px solid #ddd;
+    }
+    
+    #messageInput {
+      flex-grow: 1;
+      padding: 8px 12px;
+      border: none;
+      outline: none;
+      font-size: 14px;
+    }
+    
+    #sendButton {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    #sendButton:hover {
+      background-color: #45a049;
+    }
+    
+    #chatToggle {
+      margin-right: 5px;
+    }
+    
+    .collapsed #chatMessages,
+    .collapsed #chatInput {
+      display: none;
+    }
+    
+    /* Quick emoji responses */
+    #emojiResponses {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 5px;
+      background-color: #f0f0f0;
+      border-top: 1px solid #ddd;
+    }
+    
+    .emoji-btn {
+      margin: 3px;
+      padding: 5px 8px;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    .emoji-btn:hover {
+      background-color: #e9e9e9;
+      transform: scale(1.05);
+    }
+    
+    /* Game end notification */
+    #gameEndNotification {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      z-index: 300;
+      max-width: 80%;
+    }
+    
+    #gameEndNotification h3 {
+      margin-top: 0;
+      font-size: 24px;
+    }
+    
+    #gameEndNotification p {
+      margin-bottom: 20px;
+    }
+    
+    /* AI thinking indicator */
+    #aiThinking {
+      position: absolute;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 16px;
+      display: none;
+      z-index: 150;
+    }
+    
+    .thinking-dots {
+      display: inline-block;
+      width: 30px;
+      text-align: left;
+    }
+    
+    /* Responsive styles */
+    @media screen and (max-width: 768px) {
+      .mode-card {
+        width: 250px;
+        padding: 15px;
+      }
+      
+      .setup-card {
+        width: 90%;
+        max-width: 350px;
+      }
+      
+      #info {
+        font-size: 16px;
+      }
+      
+      #gameStatus {
+        font-size: 20px;
+      }
+      
+      #scoreBoard {
+        font-size: 14px;
+      }
+      
+      .btn {
+        padding: 8px 16px;
+        font-size: 14px;
+      }
+      
+      #chatContainer {
+        width: 250px;
+        bottom: 70px;
+      }
+      
+      #chatMessages {
+        height: 150px;
+      }
+    }
+    
+    @media screen and (max-width: 480px) {
+      .player-option {
+        display: block;
+        margin: 10px 0;
+      }
+      
+      .tabs {
+        flex-direction: column;
+      }
+      
+      .tab {
+        margin: 2px 0;
+        border-radius: 5px;
+      }
+      
+      #chatContainer {
+        width: 220px;
+        bottom: 60px;
+        right: 10px;
+      }
+      
+      #chatMessages {
+        height: 120px;
+      }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+  <!-- Audio elements for game sounds -->
+  <audio id="moveXSound" preload="auto">
+    <source src="https://assets.mixkit.co/active_storage/sfx/3005/3005-preview.mp3" type="audio/mp3">
+  </audio>
+  <audio id="moveOSound" preload="auto">
+    <source src="https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3" type="audio/mp3">
+  </audio>
+  <audio id="winSound" preload="auto">
+    <source src="https://assets.mixkit.co/active_storage/sfx/2/2-preview.mp3" type="audio/mp3">
+  </audio>
+  <audio id="mathCorrectSound" preload="auto">
+    <source src="https://assets.mixkit.co/active_storage/sfx/1009/1009-preview.mp3" type="audio/mp3">
+  </audio>
+  <audio id="mathIncorrectSound" preload="auto">
+    <source src="https://assets.mixkit.co/active_storage/sfx/979/979-preview.mp3" type="audio/mp3">
+  </audio>
+  <audio id="drawSound" preload="auto">
+    <source src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3" type="audio/mp3">
+  </audio>
+
+  <!-- Audio controls -->
+  <div id="audioControls">
+    <label for="soundToggle">Sound:</label>
+    <input type="checkbox" id="soundToggle" checked>
+  </div>
+  
+  <!-- Mode Selector Screen -->
+  <div id="modeSelector">
+    <div class="mode-card" id="singlePcMode">
+      <div class="mode-icon">🖥️</div>
+      <h2>Single PC Mode</h2>
+      <p>Play on this computer, taking turns</p>
+    </div>
+    <div class="mode-card" id="multiplayerMode">
+      <div class="mode-icon">🌐</div>
+      <h2>Two PC Mode</h2>
+      <p>Play with someone on another computer</p>
+    </div>
+    <div class="mode-card" id="aiMode">
+      <div class="mode-icon">🤖</div>
+      <h2>AI Mode</h2>
+      <p>Play against the computer</p>
+    </div>
+  </div>
+  
+  <!-- AI Setup Screen -->
+  <div id="aiSetup">
+    <h2 style="color: white; margin-bottom: 20px;">Select AI Difficulty</h2>
+    <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+      <div class="ai-difficulty-card" id="aiEasy">
+        <div class="ai-icon">😊</div>
+        <h3>Easy</h3>
+        <p>For beginners - AI makes random moves</p>
+      </div>
+      <div class="ai-difficulty-card" id="aiMedium">
+        <div class="ai-icon">🧠</div>
+        <h3>Medium</h3>
+        <p>Balanced challenge - AI plays defensively</p>
+      </div>
+      <div class="ai-difficulty-card" id="aiHard">
+        <div class="ai-icon">🔥</div>
+        <h3>Hard</h3>
+        <p>Expert level - AI plays strategically</p>
+      </div>
+    </div>
+    <div style="margin-top: 20px;">
+      <button class="btn" id="cancelAiSetupBtn" style="background-color: #f44336;">Cancel</button>
+    </div>
+  </div>
+  
+  <!-- AI Thinking Indicator -->
+  <div id="aiThinking">
+    AI is thinking<span class="thinking-dots">...</span>
+  </div>
+  
+  <!-- Multiplayer Setup Screen -->
+  <div id="multiplayerSetup">
+    <div class="setup-card">
+      <h2>Two PC Mode Setup</h2>
+      <div class="tabs">
+        <div class="tab active" data-tab="create">Create Game</div>
+        <div class="tab" data-tab="join">Join Game</div>
+      </div>
+      
+      <div class="tab-content active" id="createGame">
+        <p>Create a new game and share the ID with your friend</p>
+        <button class="btn" id="generateGameBtn">Generate Game ID</button>
+        <div id="gameIdDisplay" style="display:none;"></div>
+        <button id="copyButton" style="display:none;">Copy</button>
+        <p>You will play as: <span id="creatorRole">TATI (X)</span></p>
+        <div id="waitingMessage" style="display:none;">Waiting for opponent to join...</div>
+      </div>
+      
+      <div class="tab-content" id="joinGame">
+        <p>Enter the game ID shared by your friend</p>
+        <input type="text" id="gameIdInput" placeholder="Game ID" style="width:100%; padding:10px; margin:10px 0;">
+        <p>You will play as: <span id="joinerRole">YONI (O)</span></p>
+        <button class="btn" id="joinGameBtn">Join Game</button>
+      </div>
+      
+      <div style="margin-top: 20px; text-align: center;">
+        <button class="btn" id="cancelSetupBtn" style="background-color: #f44336;">Cancel</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Lobby UI for Multiplayer -->
+  <div id="lobby">
+    <div id="lobbyMessage">Waiting for opponent to join...</div>
+    <button id="lobbyStartBtn" class="btn" style="display:none; margin-top:10px;">Start Game</button>
+  </div>
+  
+  <!-- Connection Status -->
+  <div id="connectionStatus">
+    <span class="status-indicator status-disconnected"></span>
+    <span id="statusText">Disconnected</span>
+  </div>
+  
+  <!-- Game End Notification -->
+  <div id="gameEndNotification">
+    <h3 id="gameEndTitle">Game Over</h3>
+    <p id="gameEndMessage"></p>
+    <button class="btn" id="gameEndCloseBtn">Close</button>
+  </div>
+  
+  <div id="info">5x5 Tic-Tac-Toe (Connect 4) - X: TATI, O: YONI</div>
+  <div id="gameStatus">Select who starts</div>
+  <button id="resetButton">Reset Game</button>
+  
+  <div id="playerSelector">
+    <div class="player-option">
+      <input type="radio" id="tatiFirst" name="startPlayer" value="X" checked>
+      <label for="tatiFirst">TATI starts (X)</label>
+    </div>
+    <div class="player-option">
+      <input type="radio" id="yoniFirst" name="startPlayer" value="O">
+      <label for="yoniFirst">YONI starts (O)</label>
+    </div>
+    <button class="btn" id="startGameBtn">Start Game</button>
+  </div>
+  
+  <div id="scoreBoard">
+    <div>TATI (X): <span id="scoreX">0</span> points</div>
+    <div>YONI (O): <span id="scoreO">0</span> points</div>
+  </div>
+  
+  <!-- Chat Container -->
+  <div id="chatContainer">
+    <div id="chatHeader">
+      <span>Game Chat</span>
+      <span id="chatToggle">-</span>
+    </div>
+    <div id="chatMessages"></div>
+    <div id="emojiResponses">
+      <button class="emoji-btn">👍 Good move!</button>
+      <button class="emoji-btn">🤔 Hmm...</button>
+      <button class="emoji-btn">😂 Haha!</button>
+      <button class="emoji-btn">🎮 Your turn</button>
+      <button class="emoji-btn">⏱️ Hurry up!</button>
+      <button class="emoji-btn">🔥 Nice one!</button>
+      <button class="emoji-btn">😱 Oh no!</button>
+      <button class="emoji-btn">🏆 I'll win!</button>
+    </div>
+    <div id="chatInput">
+      <input type="text" id="messageInput" placeholder="Type a message...">
+      <button id="sendButton">Send</button>
+    </div>
+  </div>
+  
+  <div id="mathModal">
+    <div class="modal-content">
+      <h2>Double Your Points!</h2>
+      <p>YONI, solve this math problem to double your points:</p>
+      <div id="mathQuestion"></div>
+      <input type="number" id="answerInput" placeholder="Answer">
+      <div>
+        <button class="btn" id="submitAnswer">Submit</button>
+        <button class="btn" id="skipQuestion" style="background-color: #f44336;">Skip</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="confetti-container" id="confettiContainer"></div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // Game variables
+    let scene, camera, renderer;
+    let board = [];
+    let currentPlayer = 'X';
+    let gameOver = false;
+    let gameStarted = false;
+    let gameMode = 'singlePc'; // 'singlePc', 'multiplayer', or 'ai'
+    const BOARD_SIZE = 5;
+    const CELL_SIZE = 1.25; // Increased by 25% from 1.0
+    const WINNING_LENGTH = 4;
+    const SPACING = 0.1;
+    const TOTAL_SIZE = BOARD_SIZE * (CELL_SIZE + SPACING) - SPACING;
+    const OFFSET = TOTAL_SIZE / 2 - CELL_SIZE / 2;
+    
+    // Player names and scores
+    const PLAYER_X = "TATI";
+    const PLAYER_O = "YONI";
+    let scoreX = 0;
+    let scoreO = 0;
+    
+    // Sound settings
+    let soundEnabled = true;
+
+    // Audio elements
+    const moveXSound = document.getElementById('moveXSound');
+    const moveOSound = document.getElementById('moveOSound');
+    const winSound = document.getElementById('winSound');
+    const mathCorrectSound = document.getElementById('mathCorrectSound');
+    const mathIncorrectSound = document.getElementById('mathIncorrectSound');
+    const drawSound = document.getElementById('drawSound');
+    
+    // Multiplayer variables
+    let peer;
+    let connection;
+    let isHost = false;
+    let myPlayerSymbol = null;
+    let gameId = '';
+    let peerConnected = false;
+    
+    // AI variables
+    let aiDifficulty = 'medium'; // 'easy', 'medium', or 'hard'
+    let aiThinking = false;
+    let aiPlayer = 'O'; // AI is usually YONI (O)
+    let humanPlayer = 'X'; // Human is usually TATI (X)
+    let aiThinkingDots = 0;
+    let aiThinkingInterval;
+    
+    // Math challenge variables
+    let currentAnswer = 0;
+    let mathDifficulty = 1; // Start with easy questions
+    let consecutiveCorrect = 0;
+    let currentMathProblem = null; // Store the current math problem for multiplayer sharing
+    
+    // Camera settings for stable rendering
+    let cameraAngle = 0;
+    let cameraHeight = 10; // Increased from 8 to accommodate larger board
+    let cameraDistance = 12; // Increased from 8 to accommodate larger board
+    let cameraRotationSpeed = 0.001; // Reduced from 0.002 for smoother rotation
+    let isCameraAutoRotating = true;
+    let lastFrameTime = 0;
+    
+    // Chat variables
+    let chatCollapsed = false;
+
+    // Sound toggle event listener
+    document.getElementById('soundToggle').addEventListener('change', function() {
+      soundEnabled = this.checked;
+      console.log('Sound ' + (soundEnabled ? 'enabled' : 'disabled'));
+    });
+
+    // Function to play sound
+    function playSound(sound) {
+      if (soundEnabled) {
+        // Stop and reset the sound before playing to allow rapid replays
+        sound.pause();
+        sound.currentTime = 0;
+        sound.play().catch(error => {
+          console.log('Sound play error: ', error);
+        });
+      }
+    }
+
+    // Function to share sound event with other player in multiplayer
+    function shareSoundEvent(soundType) {
+      if (gameMode === 'multiplayer' && connection && connection.open) {
+        sendGameMessage({
+          type: 'sound',
+          soundType: soundType
+        });
+      }
+    }
+    
+    // Mode Selection
+    document.getElementById('singlePcMode').addEventListener('click', () => {
+      gameMode = 'singlePc';
+      document.getElementById('modeSelector').style.display = 'none';
+      initGame();
+    });
+    
+    document.getElementById('multiplayerMode').addEventListener('click', () => {
+      gameMode = 'multiplayer';
+      document.getElementById('modeSelector').style.display = 'none';
+      document.getElementById('multiplayerSetup').style.display = 'flex';
+      setupMultiplayerTabs();
+    });
+    
+    document.getElementById('aiMode').addEventListener('click', () => {
+      gameMode = 'ai';
+      document.getElementById('modeSelector').style.display = 'none';
+      document.getElementById('aiSetup').style.display = 'flex';
+    });
+    
+    // AI difficulty selection
+    document.getElementById('aiEasy').addEventListener('click', () => {
+      aiDifficulty = 'easy';
+      startAiGame();
+    });
+    
+    document.getElementById('aiMedium').addEventListener('click', () => {
+      aiDifficulty = 'medium';
+      startAiGame();
+    });
+    
+    document.getElementById('aiHard').addEventListener('click', () => {
+      aiDifficulty = 'hard';
+      startAiGame();
+    });
+    
+    // Cancel buttons
+    document.getElementById('cancelAiSetupBtn').addEventListener('click', () => {
+      document.getElementById('aiSetup').style.display = 'none';
+      document.getElementById('modeSelector').style.display = 'flex';
+    });
+    
+    document.getElementById('cancelSetupBtn').addEventListener('click', () => {
+      document.getElementById('multiplayerSetup').style.display = 'none';
+      document.getElementById('modeSelector').style.display = 'flex';
+      disconnectPeer();
+    });
+    
+    // Start AI game
+    function startAiGame() {
+      document.getElementById('aiSetup').style.display = 'none';
+      
+      // Setup who goes first
+      const tatiFirstRadio = document.getElementById('tatiFirst');
+      const yoniFirstRadio = document.getElementById('yoniFirst');
+      
+      // Default: human is X (TATI), AI is O (YONI)
+      humanPlayer = 'X';
+      aiPlayer = 'O';
+      
+      // If YONI (AI) starts, then YONI is X and TATI is O
+      if (yoniFirstRadio.checked) {
+        humanPlayer = 'O';
+        aiPlayer = 'X';
+        // Force UI to show correct selection
+        tatiFirstRadio.checked = false;
+        yoniFirstRadio.checked = true;
+      } else {
+        // Force UI to show correct selection
+        tatiFirstRadio.checked = true;
+        yoniFirstRadio.checked = false;
+      }
+      
+      initGame();
+    }
+    
+    // Setup multiplayer tabs
+    function setupMultiplayerTabs() {
+      const tabs = document.querySelectorAll('.tab');
+      const tabContents = document.querySelectorAll('.tab-content');
+      
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          // Remove active class from all tabs and contents
+          tabs.forEach(t => t.classList.remove('active'));
+          tabContents.forEach(c => c.classList.remove('active'));
+          
+          // Add active class to clicked tab and corresponding content
+          tab.classList.add('active');
+          const tabId = tab.getAttribute('data-tab');
+          document.getElementById(tabId + 'Game').classList.add('active');
+        });
+      });
+      
+      // Setup create game button
+      document.getElementById('generateGameBtn').addEventListener('click', createMultiplayerGame);
+      
+      // Setup join game button
+      document.getElementById('joinGameBtn').addEventListener('click', joinMultiplayerGame);
+      
+      // Setup copy button
+      document.getElementById('copyButton').addEventListener('click', copyGameId);
+      
+      // Setup the multiplayer connection
+      initPeerConnection();
+    }
+    
+    // Initialize the WebRTC peer connection
+    function initPeerConnection() {
+      // Check if PeerJS is loaded
+      if (typeof Peer === 'undefined') {
+        console.error('PeerJS library not loaded');
+        alert('Failed to load networking library. Please refresh the page or try again later.');
+        return;
+      }
+      
+      // Create a random peer ID
+      const peerId = 'tictactoe-' + Math.random().toString(36).substr(2, 9);
+      
+      // Initialize the peer connection
+      peer = new Peer(peerId, {
+        debug: 2 // 0 = no logs, 3 = all logs
+      });
+      
+      // Handle peer connection open
+      peer.on('open', id => {
+        console.log('My peer ID is: ' + id);
+        updateConnectionStatus('ready');
+      });
+      
+      // Handle peer connection error
+      peer.on('error', error => {
+        console.error('Peer connection error:', error);
+        updateConnectionStatus('error', error.message);
+        
+        // Special handling for "peer not found" error
+        if (error.type === 'peer-unavailable') {
+          alert('Game not found. Please check the Game ID and try again.');
+        } else {
+          alert('Connection error: ' + error.message);
+        }
+      });
+      
+      // Handle incoming connections (for host)
+      peer.on('connection', conn => {
+        // If we already have a connection, reject this one
+        if (connection && connection.open) {
+          conn.close();
+          return;
+        }
+        
+        connection = conn;
+        setupConnectionHandlers();
+        
+        // Since we're receiving the connection, we're the host
+        isHost = true;
+        myPlayerSymbol = 'X'; // Host is TATI (X)
+        
+        // Update UI
+        document.getElementById('waitingMessage').style.display = 'none';
+        updateConnectionStatus('connected');
+        
+        // Show lobby with start button for host
+        document.getElementById('lobbyStartBtn').style.display = 'block';
+        document.getElementById('lobbyMessage').textContent = 'Opponent joined! Click Start Game when ready.';
+        document.getElementById('multiplayerSetup').style.display = 'none';
+        document.getElementById('lobby').style.display = 'block';
+      });
+    }
+    
+    // Create a new multiplayer game (as host)
+    function createMultiplayerGame() {
+      if (!peer) {
+        alert('Network connection not initialized. Please refresh the page.');
+        return;
+      }
+      
+      // Get the peer ID as the game ID
+      gameId = peer.id;
+      
+      // Display the game ID
+      document.getElementById('gameIdDisplay').textContent = gameId;
+      document.getElementById('gameIdDisplay').style.display = 'block';
+      document.getElementById('copyButton').style.display = 'inline-block';
+      document.getElementById('generateGameBtn').style.display = 'none';
+      document.getElementById('waitingMessage').style.display = 'block';
+      
+      // Set roles
+      isHost = true;
+      myPlayerSymbol = 'X'; // Host is TATI (X)
+      
+      // Update status
+      updateConnectionStatus('waiting');
+    }
+    
+    // Join an existing multiplayer game
+    function joinMultiplayerGame() {
+      const gameIdInput = document.getElementById('gameIdInput').value.trim();
+      
+      if (!gameIdInput) {
+        alert('Please enter a valid Game ID');
+        return;
+      }
+      
+      if (!peer) {
+        alert('Network connection not initialized. Please refresh the page.');
+        return;
+      }
+      
+      // Attempt to connect to the host
+      gameId = gameIdInput;
+      connection = peer.connect(gameId);
+      
+      if (!connection) {
+        alert('Failed to connect. Please check the Game ID and try again.');
+        return;
+      }
+      
+      // Setup connection event handlers
+      setupConnectionHandlers();
+      
+      // Set roles
+      isHost = false;
+      myPlayerSymbol = 'O'; // Joiner is YONI (O)
+      
+      // Update UI
+      document.getElementById('joinGameBtn').disabled = true;
+      document.getElementById('joinGameBtn').textContent = 'Connecting...';
+      updateConnectionStatus('connecting');
+    }
+    
+    // Setup connection event handlers
+    function setupConnectionHandlers() {
+      connection.on('open', () => {
+        console.log('Connection established');
+        peerConnected = true;
+        
+        // Update UI based on role
+        if (!isHost) {
+          // If we're joining, show waiting for host to start
+          document.getElementById('multiplayerSetup').style.display = 'none';
+          document.getElementById('lobby').style.display = 'block';
+          document.getElementById('lobbyMessage').textContent = 'Connected! Waiting for host to start the game...';
+        }
+        
+        updateConnectionStatus('connected');
+        
+        // Show the chat for multiplayer
+        document.getElementById('chatContainer').style.display = 'block';
+        
+        // Send initial message to other player
+        sendGameMessage({
+          type: 'chat',
+          message: 'Hello! Ready to play?',
+          player: myPlayerSymbol === 'X' ? PLAYER_X : PLAYER_O
+        });
+      });
+      
+      connection.on('data', data => {
+        console.log('Received data:', data);
+        handleGameMessage(data);
+      });
+      
+      connection.on('close', () => {
+        console.log('Connection closed');
+        peerConnected = false;
+        updateConnectionStatus('disconnected');
+        
+        // Show disconnection message if game was in progress
+        if (gameStarted) {
+          showGameEndNotification('Connection Lost', 'Your opponent disconnected from the game.');
+        }
+        
+        // Hide chat when disconnected
+        document.getElementById('chatContainer').style.display = 'none';
+      });
+      
+      connection.on('error', error => {
+        console.error('Connection error:', error);
+        peerConnected = false;
+        updateConnectionStatus('error', error.message);
+        
+        // Show error message
+        alert('Connection error: ' + error.message);
+        
+        // Hide chat when error
+        document.getElementById('chatContainer').style.display = 'none';
+      });
+    }
+    
+    // Send game message to the other player
+    function sendGameMessage(message) {
+      if (connection && connection.open) {
+        try {
+          connection.send(message);
+        } catch (error) {
+          console.error('Error sending message:', error);
+        }
+      }
+    }
+    
+    // Handle game message from the other player
+    function handleGameMessage(data) {
+      if (!data || !data.type) return;
+      
+      switch (data.type) {
+        case 'start':
+          // Host is starting the game
+          document.getElementById('lobby').style.display = 'none';
+          initGame();
+          break;
+          
+        case 'move':
+          // Other player made a move
+          if (gameStarted && !gameOver && data.row !== undefined && data.col !== undefined) {
+            // Process the move locally
+            makeMove(data.row, data.col, false); // false = don't send move to peer
+          }
+          break;
+          
+        case 'reset':
+          // Other player is resetting the game
+          resetGame();
+          break;
+          
+        case 'chat':
+          // Chat message received
+          if (data.message && data.player) {
+            addChatMessage(data.message, data.player);
+          }
+          break;
+          
+        case 'sound':
+          // Sound event received
+          handleRemoteSoundEvent(data.soundType);
+          break;
+          
+        case 'mathChallenge':
+          // Math challenge for multiplayer
+          if (data.problem && myPlayerSymbol === 'O') {
+            currentMathProblem = data.problem;
+            showMathChallenge();
+          }
+          break;
+      }
+    }
+    
+    // Handle remote sound event
+    function handleRemoteSoundEvent(soundType) {
+      if (!soundEnabled) return;
+      
+      switch (soundType) {
+        case 'moveX':
+          playSound(moveXSound);
+          break;
+        case 'moveO':
+          playSound(moveOSound);
+          break;
+        case 'win':
+          playSound(winSound);
+          break;
+        case 'draw':
+          playSound(drawSound);
+          break;
+        case 'mathCorrect':
+          playSound(mathCorrectSound);
+          break;
+        case 'mathIncorrect':
+          playSound(mathIncorrectSound);
+          break;
+      }
+    }
+    
+    // Update connection status UI
+    function updateConnectionStatus(status, message = '') {
+      const statusElement = document.getElementById('connectionStatus');
+      const statusText = document.getElementById('statusText');
+      const statusIndicator = statusElement.querySelector('.status-indicator');
+      
+      // Only show status in multiplayer mode
+      if (gameMode !== 'multiplayer') {
+        statusElement.style.display = 'none';
+        return;
+      }
+      
+      statusElement.style.display = 'block';
+      
+      // Remove all status classes
+      statusIndicator.classList.remove('status-connecting', 'status-connected', 'status-disconnected');
+      
+      switch (status) {
+        case 'ready':
+          statusText.textContent = 'Ready to connect';
+          statusIndicator.classList.add('status-disconnected');
+          break;
+        case 'waiting':
+          statusText.textContent = 'Waiting for opponent';
+          statusIndicator.classList.add('status-connecting');
+          break;
+        case 'connecting':
+          statusText.textContent = 'Connecting...';
+          statusIndicator.classList.add('status-connecting');
+          break;
+        case 'connected':
+          statusText.textContent = 'Connected';
+          statusIndicator.classList.add('status-connected');
+          break;
+        case 'disconnected':
+          statusText.textContent = 'Disconnected';
+          statusIndicator.classList.add('status-disconnected');
+          break;
+        case 'error':
+          statusText.textContent = 'Error: ' + (message || 'Unknown error');
+          statusIndicator.classList.add('status-disconnected');
+          break;
+      }
+    }
+    
+    // Copy game ID to clipboard
+    function copyGameId() {
+      const gameIdElement = document.getElementById('gameIdDisplay');
+      
+      if (!gameIdElement || !gameIdElement.textContent) return;
+      
+      // Create a temporary textarea to copy from
+      const textarea = document.createElement('textarea');
+      textarea.value = gameIdElement.textContent;
+      document.body.appendChild(textarea);
+      textarea.select();
+      
+      try {
+        // Execute the copy command
+        document.execCommand('copy');
+        // Show feedback
+        const copyButton = document.getElementById('copyButton');
+        copyButton.textContent = 'Copied!';
+        setTimeout(() => {
+          copyButton.textContent = 'Copy';
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy text: ', err);
+      }
+      
+      // Remove the temporary textarea
+      document.body.removeChild(textarea);
+    }
+    
+    // Disconnect and clean up peer connection
+    function disconnectPeer() {
+      if (connection) {
+        connection.close();
+      }
+      
+      if (peer) {
+        peer.destroy();
+      }
+      
+      connection = null;
+      peer = null;
+      peerConnected = false;
+      isHost = false;
+      myPlayerSymbol = null;
+      gameId = '';
+      
+      updateConnectionStatus('disconnected');
+    }
+    
+    // Chat functionality
+    document.getElementById('chatHeader').addEventListener('click', toggleChat);
+    document.getElementById('sendButton').addEventListener('click', sendChatMessage);
+    document.getElementById('messageInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        sendChatMessage();
+      }
+    });
+    
+    // Setup emoji quick responses
+    const emojiButtons = document.querySelectorAll('.emoji-btn');
+    emojiButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const message = this.textContent;
+        sendChatMessage(message);
+      });
+    });
+    
+    // Toggle chat collapsed/expanded
+    function toggleChat() {
+      const chatContainer = document.getElementById('chatContainer');
+      const chatToggle = document.getElementById('chatToggle');
+      
+      chatCollapsed = !chatCollapsed;
+      
+      if (chatCollapsed) {
+        chatContainer.classList.add('collapsed');
+        chatToggle.textContent = '+';
+      } else {
+        chatContainer.classList.remove('collapsed');
+        chatToggle.textContent = '-';
+      }
+    }
+    
+    // Send chat message
+    function sendChatMessage(customMessage = null) {
+      // Allow chat in both single PC and multiplayer modes
+      if (gameMode !== 'multiplayer' && gameMode !== 'singlePc') return;
+      
+      let message;
+      if (customMessage) {
+        message = customMessage;
+      } else {
+        const messageInput = document.getElementById('messageInput');
+        message = messageInput.value.trim();
+        
+        if (!message) return;
+        
+        // Clear input
+        messageInput.value = '';
+      }
+      
+      // Special command to show code
+      if (message.toLowerCase() === '/showcode' && gameMode === 'multiplayer' && isHost) {
+        // Get the current page HTML
+        const pageHtml = document.documentElement.outerHTML;
+        // Add message to local chat with code preview
+        addChatMessage("Here's the game code (first 500 chars):\n" + pageHtml.substring(0, 500) + "...", PLAYER_X);
+        
+        // Send to other player if in multiplayer mode
+        if (connection && connection.open) {
+          sendGameMessage({
+            type: 'chat',
+            message: "Here's the game code (first 500 chars):\n" + pageHtml.substring(0, 500) + "...",
+            player: PLAYER_X
+          });
+        }
+        return;
+      }
+      
+      // Add message to local chat
+      let playerName;
+      if (gameMode === 'multiplayer') {
+        playerName = myPlayerSymbol === 'X' ? PLAYER_X : PLAYER_O;
+      } else {
+        playerName = currentPlayer === 'X' ? PLAYER_X : PLAYER_O;
+      }
+      
+      addChatMessage(message, playerName);
+      
+      // Send message to other player if in multiplayer mode
+      if (gameMode === 'multiplayer' && connection && connection.open) {
+        sendGameMessage({
+          type: 'chat',
+          message: message,
+          player: playerName
+        });
+      }
+    }
+    
+    // Add message to chat display
+    function addChatMessage(message, playerName) {
+      const chatMessages = document.getElementById('chatMessages');
+      const messageElement = document.createElement('div');
+      
+      // Determine player class for styling
+      const playerClass = playerName === PLAYER_X ? 'message-tati' : 'message-yoni';
+      messageElement.className = `message ${playerClass}`;
+      
+      // Create player name element
+      const playerElement = document.createElement('div');
+      playerElement.className = 'message-player';
+      playerElement.textContent = playerName;
+      
+      // Create message content element
+      const contentElement = document.createElement('div');
+      contentElement.className = 'message-content';
+      
+      // Check if message contains code
+      if (message.includes('game code')) {
+        // Format code with monospace and preserve whitespace
+        contentElement.style.fontFamily = 'monospace';
+        contentElement.style.whiteSpace = 'pre-wrap';
+        contentElement.style.fontSize = '10px';
+        contentElement.style.overflow = 'auto';
+        contentElement.style.maxHeight = '100px';
+      }
+      
+      contentElement.textContent = message;
+      
+      // Assemble message
+      messageElement.appendChild(playerElement);
+      messageElement.appendChild(contentElement);
+      
+      // Add to chat and scroll to bottom
+      chatMessages.appendChild(messageElement);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      
+      // If chat is collapsed, temporarily show it
+      if (chatCollapsed) {
+        const chatContainer = document.getElementById('chatContainer');
+        const chatToggle = document.getElementById('chatToggle');
+        
+        // Flash the chat open
+        chatContainer.classList.remove('collapsed');
+        chatToggle.textContent = '-';
+        
+        // Close it again after a few seconds
+        setTimeout(() => {
+          chatContainer.classList.add('collapsed');
+          chatToggle.textContent = '+';
+        }, 3000);
+      }
+    }
+    
+    // Initial game setup
+    function init() {
+      // Set up the scene
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xf0f0f0);
+      
+      // Set up the camera
+      camera = new THREE.PerspectiveCamera(
+        60, 
+        window.innerWidth / window.innerHeight, 
+        0.1, 
+        1000
+      );
+      
+      // Position the camera
+      updateCameraPosition();
+      
+      // Set up the renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+      
+      // Add light
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+      
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(0, 10, 10);
+      scene.add(directionalLight);
+      
+      // Create the board
+      createBoard();
+      
+      // Add grid lines
+      addGridLines();
+      
+      // Setup event listeners
+      window.addEventListener('resize', onWindowResize);
+      renderer.domElement.addEventListener('click', onBoardClick);
+      document.getElementById('resetButton').addEventListener('click', resetGame);
+      document.getElementById('startGameBtn').addEventListener('click', startGame);
+      document.getElementById('gameEndCloseBtn').addEventListener('click', closeGameEndNotification);
+      document.getElementById('lobbyStartBtn').addEventListener('click', startMultiplayerGame);
+      
+      // Setup math challenge event listeners
+      document.getElementById('submitAnswer').addEventListener('click', checkMathAnswer);
+      document.getElementById('skipQuestion').addEventListener('click', skipMathQuestion);
+      document.getElementById('answerInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          checkMathAnswer();
+        }
+      });
+      
+      // Start the animation loop
+      animate();
+    }
+    
+    // Update camera position based on angle
+    function updateCameraPosition() {
+      camera.position.x = Math.sin(cameraAngle) * cameraDistance;
+      camera.position.z = Math.cos(cameraAngle) * cameraDistance;
+      camera.position.y = cameraHeight;
+      camera.lookAt(0, 0, 0);
+    }
+    
+    // Create the board
+    function createBoard() {
+      // Clear existing board
+      while(scene.children.length > 0){ 
+        scene.remove(scene.children[0]); 
+      }
+      
+      // Add lights
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+      
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(0, 10, 10);
+      scene.add(directionalLight);
+      
+      // Create the board grid
+      board = [];
+      for (let row = 0; row < BOARD_SIZE; row++) {
+        board[row] = [];
+        for (let col = 0; col < BOARD_SIZE; col++) {
+          // Create cell at this position
+          createCell(row, col);
+          
+          // Initialize board state
+          board[row][col] = null;
+        }
+      }
+    }
+    
+    // Create a cell in the board
+    function createCell(row, col) {
+      // Calculate position
+      const x = (col * (CELL_SIZE + SPACING)) - OFFSET;
+      const y = 0;
+      const z = (row * (CELL_SIZE + SPACING)) - OFFSET;
+      
+      // Create cell mesh (a box)
+      const geometry = new THREE.BoxGeometry(CELL_SIZE, 0.2, CELL_SIZE);
+      const material = new THREE.MeshPhongMaterial({ 
+        color: 0xFFFFFF,
+        specular: 0x111111,
+        shininess: 30
+      });
+      
+      const cell = new THREE.Mesh(geometry, material);
+      cell.position.set(x, y, z);
+      
+      // Add custom properties to identify this cell
+      cell.userData = { row, col, type: 'cell' };
+      
+      scene.add(cell);
+    }
+    
+    // Add grid lines to the board
+    function addGridLines() {
+      const gridSize = BOARD_SIZE * (CELL_SIZE + SPACING) - SPACING;
+      const halfGrid = gridSize / 2;
+      
+      const gridHelper = new THREE.GridHelper(gridSize, BOARD_SIZE, 0x000000, 0x000000);
+      gridHelper.position.y = 0.11; // Slightly above the cells
+      scene.add(gridHelper);
+      
+      // Add a border around the grid
+      const borderMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+      const borderGeometry = new THREE.BufferGeometry();
+      
+      const borderVertices = new Float32Array([
+        -halfGrid, 0.11, -halfGrid,
+        halfGrid, 0.11, -halfGrid,
+        halfGrid, 0.11, halfGrid,
+        -halfGrid, 0.11, halfGrid,
+        -halfGrid, 0.11, -halfGrid
+      ]);
+      
+      borderGeometry.setAttribute('position', new THREE.BufferAttribute(borderVertices, 3));
+      
+      const border = new THREE.Line(borderGeometry, borderMaterial);
+      scene.add(border);
+    }
+    
+    // Place a marker (X or O) on the board
+    function placeMarker(row, col, player) {
+      // Calculate position
+      const x = (col * (CELL_SIZE + SPACING)) - OFFSET;
+      const y = 0.15; // Slightly above the cell
+      const z = (row * (CELL_SIZE + SPACING)) - OFFSET;
+      
+      let marker;
+      
+      if (player === 'X') {
+        // Create X marker (two crossed cylinders)
+        const xGroup = new THREE.Group();
+        
+        // First diagonal line
+        const line1Geo = new THREE.CylinderGeometry(0.05, 0.05, CELL_SIZE * 0.8, 32);
+        const line1Mat = new THREE.MeshPhongMaterial({ color: 0xCC0000 });  // Red color for X
+        const line1 = new THREE.Mesh(line1Geo, line1Mat);
+        line1.rotation.z = Math.PI / 4;
+        line1.rotation.x = Math.PI / 2;
+        
+        // Second diagonal line
+        const line2Geo = new THREE.CylinderGeometry(0.05, 0.05, CELL_SIZE * 0.8, 32);
+        const line2Mat = new THREE.MeshPhongMaterial({ color: 0xCC0000 });
+        const line2 = new THREE.Mesh(line2Geo, line2Mat);
+        line2.rotation.z = -Math.PI / 4;
+        line2.rotation.x = Math.PI / 2;
+        
+        xGroup.add(line1);
+        xGroup.add(line2);
+        
+        marker = xGroup;
+      } else {
+        // Create O marker (torus)
+        const ringGeo = new THREE.TorusGeometry(CELL_SIZE * 0.3, 0.05, 16, 100);
+        const ringMat = new THREE.MeshPhongMaterial({ color: 0x0000CC });  // Blue color for O
+        marker = new THREE.Mesh(ringGeo, ringMat);
+        marker.rotation.x = Math.PI / 2;
+      }
+      
+      marker.position.set(x, y, z);
+      
+      // Add custom properties
+      marker.userData = { row, col, type: 'marker', player };
+      
+      // Add to scene
+      scene.add(marker);
+      
+      // Update board state
+      board[row][col] = player;
+      
+      // Play sound
+      if (player === 'X') {
+        playSound(moveXSound);
+        shareSoundEvent('moveX');
+      } else {
+        playSound(moveOSound);
+        shareSoundEvent('moveO');
+      }
+    }
+    
+    // Handle window resize
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    
+    // Animation loop
+    function animate(time) {
+      requestAnimationFrame(animate);
+      
+      // Calculate delta time for smooth animation
+      const currentTime = performance.now();
+      const deltaTime = (currentTime - lastFrameTime) / 1000;
+      lastFrameTime = currentTime;
+      
+      // Rotate camera if auto-rotation is enabled
+      if (isCameraAutoRotating && !gameOver) {
+        cameraAngle += cameraRotationSpeed * deltaTime * 60; // Normalize by 60fps
+        updateCameraPosition();
+      }
+      
+      // Update AI thinking animation if needed
+      if (aiThinking) {
+        updateAiThinkingIndicator();
+      }
+      
+      renderer.render(scene, camera);
+    }
+    
+    // Handle board click
+    function onBoardClick(event) {
+      if (!gameStarted || gameOver) return;
+      
+      // If it's not the player's turn in multiplayer, ignore clicks
+      if (gameMode === 'multiplayer' && 
+          ((myPlayerSymbol === 'X' && currentPlayer !== 'X') || 
+           (myPlayerSymbol === 'O' && currentPlayer !== 'O'))) {
+        return;
+      }
+      
+      // If it's AI's turn, ignore clicks
+      if (gameMode === 'ai' && currentPlayer === aiPlayer) {
+        return;
+      }
+      
+      // Calculate mouse position
+      const mouse = new THREE.Vector2();
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      
+      // Create raycaster
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
+      
+      // Find intersections with board cells
+      const intersects = raycaster.intersectObjects(scene.children);
+      
+      for (let i = 0; i < intersects.length; i++) {
+        const object = intersects[i].object;
+        
+        // Check if it's a cell and not already occupied
+        if (object.userData && object.userData.type === 'cell') {
+          const row = object.userData.row;
+          const col = object.userData.col;
+          
+          if (board[row][col] === null) {
+            // Make the move
+            makeMove(row, col);
+            break;
+          }
+        }
+      }
+    }
+    
+    // Make a move on the board
+    function makeMove(row, col, sendToPeer = true) {
+      // Place the marker
+      placeMarker(row, col, currentPlayer);
+      
+      // In multiplayer mode, send move to the other player
+      if (gameMode === 'multiplayer' && sendToPeer) {
+        sendGameMessage({
+          type: 'move',
+          row: row,
+          col: col
+        });
+      }
+      
+      // Check for win
+      if (checkWin(row, col, currentPlayer)) {
+        endGame(currentPlayer);
+        return;
+      }
+      
+      // Check for draw
+      if (checkDraw()) {
+        endGame(null);
+        return;
+      }
+      
+      // Switch player
+      switchPlayer();
+      
+      // If it's AI's turn, make AI move
+      if (gameMode === 'ai' && currentPlayer === aiPlayer && !gameOver) {
+        makeAiMove();
+      }
+    }
+    
+    // Switch to the other player
+    function switchPlayer() {
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      updateGameStatus();
+    }
+    
+    // Check for win
+    function checkWin(row, col, player) {
+      // Check horizontally - check from the specific row
+      for (let startCol = Math.max(0, col - WINNING_LENGTH + 1); startCol <= Math.min(col, BOARD_SIZE - WINNING_LENGTH); startCol++) {
+        let count = 0;
+        for (let i = 0; i < WINNING_LENGTH; i++) {
+          if (board[row][startCol + i] === player) {
+            count++;
+          } else {
+            break;
+          }
+        }
+        if (count === WINNING_LENGTH) return true;
+      }
+      
+      // Check vertically - check from the specific column
+      for (let startRow = Math.max(0, row - WINNING_LENGTH + 1); startRow <= Math.min(row, BOARD_SIZE - WINNING_LENGTH); startRow++) {
+        let count = 0;
+        for (let i = 0; i < WINNING_LENGTH; i++) {
+          if (board[startRow + i][col] === player) {
+            count++;
+          } else {
+            break;
+          }
+        }
+        if (count === WINNING_LENGTH) return true;
+      }
+      
+      // Check diagonally (top-left to bottom-right)
+      for (let i = -WINNING_LENGTH + 1; i <= 0; i++) {
+        let startRow = row + i;
+        let startCol = col + i;
+        if (startRow < 0 || startCol < 0 || startRow > BOARD_SIZE - WINNING_LENGTH || startCol > BOARD_SIZE - WINNING_LENGTH) continue;
+        
+        let count = 0;
+        for (let j = 0; j < WINNING_LENGTH; j++) {
+          if (startRow + j >= 0 && startRow + j < BOARD_SIZE && 
+              startCol + j >= 0 && startCol + j < BOARD_SIZE && 
+              board[startRow + j][startCol + j] === player) {
+            count++;
+          } else {
+            break;
+          }
+        }
+        if (count === WINNING_LENGTH) return true;
+      }
+      
+      // Check diagonally (bottom-left to top-right)
+      for (let i = -WINNING_LENGTH + 1; i <= 0; i++) {
+        let startRow = row - i;
+        let startCol = col + i;
+        if (startRow >= BOARD_SIZE || startCol < 0 || startRow < WINNING_LENGTH - 1 || startCol > BOARD_SIZE - WINNING_LENGTH) continue;
+        
+        let count = 0;
+        for (let j = 0; j < WINNING_LENGTH; j++) {
+          if (startRow - j >= 0 && startRow - j < BOARD_SIZE && 
+              startCol + j >= 0 && startCol + j < BOARD_SIZE && 
+              board[startRow - j][startCol + j] === player) {
+            count++;
+          } else {
+            break;
+          }
+        }
+        if (count === WINNING_LENGTH) return true;
+      }
+      
+      return false;
+    }
+    
+    // Check a line for win
+    function checkLine(startRow, startCol, rowInc, colInc, player) {
+      for (let i = 0; i <= BOARD_SIZE - WINNING_LENGTH; i++) {
+        let win = true;
+        
+        for (let j = 0; j < WINNING_LENGTH; j++) {
+          const row = startRow + (i * rowInc) + (j * rowInc);
+          const col = startCol + (i * colInc) + (j * colInc);
+          
+          if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE || board[row][col] !== player) {
+            win = false;
+            break;
+          }
+        }
+        
+        if (win) return true;
+      }
+      
+      return false;
+    }
+    
+    // Check diagonals for win
+    function checkDiagonal(rowInc, colInc, player) {
+      for (let startRow = 0; startRow <= BOARD_SIZE - WINNING_LENGTH; startRow++) {
+        for (let startCol = 0; startCol <= BOARD_SIZE - WINNING_LENGTH; startCol++) {
+          let win = true;
+          
+          for (let i = 0; i < WINNING_LENGTH; i++) {
+            const row = startRow + (i * rowInc);
+            const col = startCol + (i * colInc);
+            
+            if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE || board[row][col] !== player) {
+              win = false;
+              break;
+            }
+          }
+          
+          if (win) return true;
+        }
+      }
+      
+      return false;
+    }
+    
+    // Check for draw
+    function checkDraw() {
+      for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let col = 0; col < BOARD_SIZE; col++) {
+          if (board[row][col] === null) {
+            return false;
+          }
+        }
+      }
+      
+      return true;
+    }
+    
+    // Update game status display
+    function updateGameStatus() {
+      const gameStatus = document.getElementById('gameStatus');
+      
+      if (gameOver) {
+        return;
+      }
+      
+      if (gameMode === 'multiplayer') {
+        if (currentPlayer === myPlayerSymbol) {
+          gameStatus.textContent = `Your turn (${currentPlayer === 'X' ? PLAYER_X : PLAYER_O})`;
+        } else {
+          gameStatus.textContent = `Waiting for opponent (${currentPlayer === 'X' ? PLAYER_X : PLAYER_O})`;
+        }
+      } else {
+        gameStatus.textContent = `Current Player: ${currentPlayer === 'X' ? PLAYER_X : PLAYER_O} (${currentPlayer})`;
+      }
+    }
+    
+    // End the game
+    function endGame(winner) {
+      gameOver = true;
+      
+      if (winner) {
+        const winnerName = winner === 'X' ? PLAYER_X : PLAYER_O;
+        document.getElementById('gameStatus').textContent = `${winnerName} wins!`;
+        
+        // Update score
+        if (winner === 'X') {
+          // TATI (X) wins - increase TATI's score and deduct one point from YONI (O)
+          scoreX++;
+          document.getElementById('scoreX').textContent = scoreX;
+          
+          // Deduct one point from YONI (O) if they have points
+          if (scoreO > 0) {
+            scoreO--;
+            document.getElementById('scoreO').textContent = scoreO;
+          }
+        } else {
+          // YONI (O) wins - increase YONI's score
+          scoreO++;
+          document.getElementById('scoreO').textContent = scoreO;
+        }
+        
+        // Play win sound
+        playSound(winSound);
+        shareSoundEvent('win');
+        
+        // Show confetti for winner
+        showConfetti();
+        
+        // For YONI (O), show math challenge to double points
+        if (winner === 'O' && (gameMode !== 'multiplayer' || myPlayerSymbol === 'X')) {
+          // In single PC or AI mode, or as host in multiplayer
+          setTimeout(() => {
+            showMathChallenge();
+          }, 1500);
+        }
+        
+        // In multiplayer mode, send math challenge to YONI player
+        if (gameMode === 'multiplayer' && winner === 'O' && myPlayerSymbol === 'X') {
+          // Create math problem
+          generateMathProblem();
+          
+          // Send to other player
+          sendGameMessage({
+            type: 'mathChallenge',
+            problem: currentMathProblem
+          });
+        }
+      } else {
+        document.getElementById('gameStatus').textContent = "It's a draw!";
+        playSound(drawSound);
+        shareSoundEvent('draw');
+      }
+      
+      // Show reset button
+      document.getElementById('resetButton').style.display = 'block';
+    }
+    
+    // Show confetti animation
+    function showConfetti() {
+      const confettiSettings = { 
+        particleCount: 150,
+        spread: 90,
+        origin: { y: 0.6 }
+      };
+      
+      // Launch confetti from multiple positions
+      confetti({
+        ...confettiSettings,
+        origin: { y: 0.6, x: 0.2 }
+      });
+      
+      confetti({
+        ...confettiSettings,
+        origin: { y: 0.6, x: 0.5 }
+      });
+      
+      confetti({
+        ...confettiSettings,
+        origin: { y: 0.6, x: 0.8 }
+      });
+    }
+    
+    // Reset the game
+    function resetGame() {
+      gameOver = false;
+      
+      // Reset the board state
+      for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let col = 0; col < BOARD_SIZE; col++) {
+          board[row][col] = null;
+        }
+      }
+      
+      // Remove all markers from the scene
+      for (let i = scene.children.length - 1; i >= 0; i--) {
+        const obj = scene.children[i];
+        if (obj.userData && obj.userData.type === 'marker') {
+          scene.remove(obj);
+        }
+      }
+      
+      // Hide reset button
+      document.getElementById('resetButton').style.display = 'none';
+      
+      // Reset current player to X or based on player selection
+      currentPlayer = document.getElementById('tatiFirst').checked ? 'X' : 'O';
+      
+      // Update status
+      updateGameStatus();
+      
+      // In multiplayer mode, send reset to the other player
+      if (gameMode === 'multiplayer') {
+        sendGameMessage({ type: 'reset' });
+      }
+      
+      // If it's AI's turn, make AI move
+      if (gameMode === 'ai' && currentPlayer === aiPlayer) {
+        makeAiMove();
+      }
+    }
+    
+    // Start the game
+    function startGame() {
+      if (gameStarted) return;
+      
+      gameStarted = true;
+      
+      // Hide player selector
+      document.getElementById('playerSelector').style.display = 'none';
+      
+      // Get starting player
+      currentPlayer = document.getElementById('tatiFirst').checked ? 'X' : 'O';
+      
+      // Update status
+      updateGameStatus();
+      
+      // If AI goes first, make AI move
+      if (gameMode === 'ai' && currentPlayer === aiPlayer) {
+        makeAiMove();
+      }
+    }
+    
+    // Start multiplayer game
+    function startMultiplayerGame() {
+      if (!isHost) return;
+      
+      // Hide lobby
+      document.getElementById('lobby').style.display = 'none';
+      
+      // Send start message to other player
+      sendGameMessage({ type: 'start' });
+      
+      // Initialize game
+      initGame();
+    }
+    
+    // Initialize the game
+    function initGame() {
+      if (!scene) {
+        init();
+      } else {
+        // Reset the game state
+        resetGame();
+      }
+      
+      // Hide all setup screens
+      document.getElementById('playerSelector').style.display = 'none';
+      document.getElementById('multiplayerSetup').style.display = 'none';
+      document.getElementById('aiSetup').style.display = 'none';
+      document.getElementById('lobby').style.display = 'none';
+      
+      // Set game as started
+      gameStarted = true;
+      
+      // Get starting player from radio buttons or defaults
+      if (gameMode === 'singlePc' || gameMode === 'multiplayer') {
+        currentPlayer = document.getElementById('tatiFirst').checked ? 'X' : 'O';
+      } else if (gameMode === 'ai') {
+        currentPlayer = document.getElementById('tatiFirst').checked ? 'X' : 'O';
+      }
+      
+      // Update status
+      updateGameStatus();
+      
+      // If AI goes first, make AI move
+      if (gameMode === 'ai' && currentPlayer === aiPlayer) {
+        makeAiMove();
+      }
+    }
+    
+    // Show math challenge
+    function showMathChallenge() {
+      if (gameMode !== 'multiplayer' || myPlayerSymbol === 'O') {
+        // Generate a math problem
+        generateMathProblem();
+      }
+      
+      // Show the question
+      document.getElementById('mathQuestion').textContent = currentMathProblem.question;
+      
+      // Show the modal
+      document.getElementById('mathModal').style.display = 'flex';
+      
+      // Focus on answer input
+      document.getElementById('answerInput').value = '';
+      document.getElementById('answerInput').focus();
+    }
+    
+    // Generate a math problem based on difficulty
+    function generateMathProblem() {
+      let num1, num2, operation, question, answer;
+      
+      // Adjust difficulty based on consecutive correct answers
+      if (consecutiveCorrect >= 5) {
+        mathDifficulty = 3; // Hard
+      } else if (consecutiveCorrect >= 3) {
+        mathDifficulty = 2; // Medium
+      } else {
+        mathDifficulty = 1; // Easy
+      }
+      
+      switch (mathDifficulty) {
+        case 1: // Easy - simple addition and subtraction
+          num1 = Math.floor(Math.random() * 20) + 1;
+          num2 = Math.floor(Math.random() * 20) + 1;
+          
+          if (Math.random() < 0.5) {
+            question = `${num1} + ${num2} = ?`;
+            answer = num1 + num2;
+          } else {
+            // Make sure subtraction gives a positive result
+            if (num1 < num2) {
+              [num1, num2] = [num2, num1];
+            }
+            question = `${num1} - ${num2} = ?`;
+            answer = num1 - num2;
+          }
+          break;
+          
+        case 2: // Medium - multiplication and division
+          if (Math.random() < 0.7) {
+            // Multiplication
+            num1 = Math.floor(Math.random() * 12) + 1;
+            num2 = Math.floor(Math.random() * 12) + 1;
+            question = `${num1} × ${num2} = ?`;
+            answer = num1 * num2;
+          } else {
+            // Division with integer result
+            num2 = Math.floor(Math.random() * 10) + 1;
+            answer = Math.floor(Math.random() * 10) + 1;
+            num1 = num2 * answer;
+            question = `${num1} ÷ ${num2} = ?`;
+          }
+          break;
+          
+        case 3: // Hard - mixed operations
+          const operations = ['+', '-', '×', '÷'];
+          num1 = Math.floor(Math.random() * 50) + 10;
+          num2 = Math.floor(Math.random() * 20) + 1;
+          operation = operations[Math.floor(Math.random() * 3)]; // Exclude division for simplicity
+          
+          switch (operation) {
+            case '+':
+              question = `${num1} + ${num2} = ?`;
+              answer = num1 + num2;
+              break;
+            case '-':
+              question = `${num1} - ${num2} = ?`;
+              answer = num1 - num2;
+              break;
+            case '×':
+              num1 = Math.floor(Math.random() * 15) + 5;
+              question = `${num1} × ${num2} = ?`;
+              answer = num1 * num2;
+              break;
+            case '÷':
+              // Ensure clean division
+              answer = Math.floor(Math.random() * 10) + 1;
+              num1 = num2 * answer;
+              question = `${num1} ÷ ${num2} = ?`;
+              break;
+          }
+          break;
+      }
+      
+      currentMathProblem = {
+        question: question,
+        answer: answer
+      };
+      
+      currentAnswer = answer;
+    }
+    
+    // Check math answer
+    function checkMathAnswer() {
+      const userAnswer = parseInt(document.getElementById('answerInput').value);
+      
+      if (isNaN(userAnswer)) {
+        // Invalid input
+        return;
+      }
+      
+      if (userAnswer === currentAnswer) {
+        // Correct answer
+        playSound(mathCorrectSound);
+        shareSoundEvent('mathCorrect');
+        
+        // Double points
+        scoreO++;
+        document.getElementById('scoreO').textContent = scoreO;
+        
+        // Increase consecutive correct count
+        consecutiveCorrect++;
+        
+        // Hide modal
+        document.getElementById('mathModal').style.display = 'none';
+        
+        // Show success message
+        showGameEndNotification('Correct!', 'Points doubled! 🎉');
+      } else {
+        // Incorrect answer
+        playSound(mathIncorrectSound);
+        shareSoundEvent('mathIncorrect');
+        
+        // Reset consecutive correct count
+        consecutiveCorrect = 0;
+        
+        // Hide modal
+        document.getElementById('mathModal').style.display = 'none';
+        
+        // Show failure message with the correct answer
+        showGameEndNotification('Incorrect!', `The correct answer was ${currentAnswer}. Better luck next time.`);
+      }
+    }
+    
+    // Skip math question
+    function skipMathQuestion() {
+      // Reset consecutive correct count
+      consecutiveCorrect = 0;
+      
+      // Hide modal
+      document.getElementById('mathModal').style.display = 'none';
+    }
+    
+    // AI move logic
+    function makeAiMove() {
+      // Show AI thinking indicator
+      showAiThinking();
+      
+      // Add a delay to simulate "thinking"
+      setTimeout(() => {
+        let row, col;
+        
+        switch (aiDifficulty) {
+          case 'easy':
+            // Random move
+            [row, col] = makeRandomMove();
+            break;
+          case 'medium':
+            // Try to block or win, otherwise random
+            [row, col] = makeMediumMove();
+            break;
+          case 'hard':
+            // Strategic move
+            [row, col] = makeHardMove();
+            break;
+          default:
+            // Default to medium
+            [row, col] = makeMediumMove();
+        }
+        
+        // Hide AI thinking indicator
+        hideAiThinking();
+        
+        // Make the move
+        if (row !== undefined && col !== undefined) {
+          makeMove(row, col);
+        }
+      }, 1000); // Delay for 1 second
+    }
+    
+    // Show AI thinking indicator
+    function showAiThinking() {
+      aiThinking = true;
+      document.getElementById('aiThinking').style.display = 'block';
+      
+      // Start the thinking animation
+      aiThinkingDots = 0;
+      aiThinkingInterval = setInterval(updateThinkingDots, 500);
+    }
+    
+    // Hide AI thinking indicator
+    function hideAiThinking() {
+      aiThinking = false;
+      document.getElementById('aiThinking').style.display = 'none';
+      
+      // Stop the thinking animation
+      clearInterval(aiThinkingInterval);
+    }
+    
+    // Update AI thinking dots animation
+    function updateThinkingDots() {
+      const dots = document.querySelector('.thinking-dots');
+      aiThinkingDots = (aiThinkingDots + 1) % 4;
+      dots.textContent = '.'.repeat(aiThinkingDots);
+    }
+    
+    // Update AI thinking indicator animation
+    function updateAiThinkingIndicator() {
+      // This is called from the animation loop
+      // Handled by updateThinkingDots with setInterval
+    }
+    
+    // Make a random move (easy AI)
+    function makeRandomMove() {
+      const emptyCells = [];
+      
+      // Find all empty cells
+      for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let col = 0; col < BOARD_SIZE; col++) {
+          if (board[row][col] === null) {
+            emptyCells.push([row, col]);
+          }
+        }
+      }
+      
+      // Return a random empty cell
+      if (emptyCells.length > 0) {
+        const randomIndex = Math.floor(Math.random() * emptyCells.length);
+        return emptyCells[randomIndex];
+      }
+      
+      return [undefined, undefined];
+    }
+    
+    // Make a medium difficulty move
+    function makeMediumMove() {
+      // Try to win first
+      for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let col = 0; col < BOARD_SIZE; col++) {
+          if (board[row][col] === null) {
+            // Try this move
+            board[row][col] = aiPlayer;
+            
+            // Check if this move wins
+            if (checkWin(row, col, aiPlayer)) {
+              // Undo the move and return this position
+              board[row][col] = null;
+              return [row, col];
+            }
+            
+            // Undo the move
+            board[row][col] = null;
+          }
+        }
+      }
+      
+      // Try to block opponent from winning
+      const humanPlayer = aiPlayer === 'X' ? 'O' : 'X';
+      
+      for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let col = 0; col < BOARD_SIZE; col++) {
+          if (board[row][col] === null) {
+            // Try this move for the human
+            board[row][col] = humanPlayer;
+            
+            // Check if this move would win for the human
+            if (checkWin(row, col, humanPlayer)) {
+              // Undo the move and return this position to block
+              board[row][col] = null;
+              return [row, col];
+            }
+            
+            // Undo the move
+            board[row][col] = null;
+          }
+        }
+      }
+      
+      // If no winning or blocking move, make a random move
+      return makeRandomMove();
+    }
+    
+    // Make a hard difficulty move
+    function makeHardMove() {
+      // Try to win first (same as medium)
+      for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let col = 0; col < BOARD_SIZE; col++) {
+          if (board[row][col] === null) {
+            // Try this move
+            board[row][col] = aiPlayer;
+            
+            // Check if this move wins
+            if (checkWin(row, col, aiPlayer)) {
+              // Undo the move and return this position
+              board[row][col] = null;
+              return [row, col];
+            }
+            
+            // Undo the move
+            board[row][col] = null;
+          }
+        }
+      }
+      
+      // Try to block opponent from winning (same as medium)
+      const humanPlayer = aiPlayer === 'X' ? 'O' : 'X';
+      
+      for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let col = 0; col < BOARD_SIZE; col++) {
+          if (board[row][col] === null) {
+            // Try this move for the human
+            board[row][col] = humanPlayer;
+            
+            // Check if this move would win for the human
+            if (checkWin(row, col, humanPlayer)) {
+              // Undo the move and return this position to block
+              board[row][col] = null;
+              return [row, col];
+            }
+            
+            // Undo the move
+            board[row][col] = null;
+          }
+        }
+      }
+      
+      // Try to create a fork (two winning threats)
+      for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let col = 0; col < BOARD_SIZE; col++) {
+          if (board[row][col] === null) {
+            // Try this move
+            board[row][col] = aiPlayer;
+            
+            // Count potential winning lines
+            let winningLines = countPotentialWinningLines(aiPlayer);
+            
+            if (winningLines >= 2) {
+              // This creates a fork with two or more winning threats
+              board[row][col] = null;
+              return [row, col];
+            }
+            
+            // Undo the move
+            board[row][col] = null;
+          }
+        }
+      }
+      
+      // Block opponent's fork
+      for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let col = 0; col < BOARD_SIZE; col++) {
+          if (board[row][col] === null) {
+            // Try this move for the human
+            board[row][col] = humanPlayer;
+            
+            // Count potential winning lines
+            let winningLines = countPotentialWinningLines(humanPlayer);
+            
+            if (winningLines >= 2) {
+              // This would create a fork for the human, block it
+              board[row][col] = null;
+              return [row, col];
+            }
+            
+            // Undo the move
+            board[row][col] = null;
+          }
+        }
+      }
+      
+      // Try center if empty
+      const center = Math.floor(BOARD_SIZE / 2);
+      if (board[center][center] === null) {
+        return [center, center];
+      }
+      
+      // Try corners if empty
+      const corners = [
+        [0, 0], [0, BOARD_SIZE - 1],
+        [BOARD_SIZE - 1, 0], [BOARD_SIZE - 1, BOARD_SIZE - 1]
+      ];
+      
+      const emptyCorners = corners.filter(([r, c]) => board[r][c] === null);
+      
+      if (emptyCorners.length > 0) {
+        return emptyCorners[Math.floor(Math.random() * emptyCorners.length)];
+      }
+      
+      // If all else fails, make a random move
+      return makeRandomMove();
+    }
+    
+    // Count potential winning lines
+    function countPotentialWinningLines(player) {
+      let count = 0;
+      
+      // Check each potential winning line
+      // Horizontal lines
+      for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let startCol = 0; startCol <= BOARD_SIZE - WINNING_LENGTH; startCol++) {
+          if (isPotentialWinningLine(row, startCol, 0, 1, player)) {
+            count++;
+          }
+        }
+      }
+      
+      // Vertical lines
+      for (let col = 0; col < BOARD_SIZE; col++) {
+        for (let startRow = 0; startRow <= BOARD_SIZE - WINNING_LENGTH; startRow++) {
+          if (isPotentialWinningLine(startRow, col, 1, 0, player)) {
+            count++;
+          }
+        }
+      }
+      
+      // Diagonal (top-left to bottom-right)
+      for (let startRow = 0; startRow <= BOARD_SIZE - WINNING_LENGTH; startRow++) {
+        for (let startCol = 0; startCol <= BOARD_SIZE - WINNING_LENGTH; startCol++) {
+          if (isPotentialWinningLine(startRow, startCol, 1, 1, player)) {
+            count++;
+          }
+        }
+      }
+      
+      // Diagonal (bottom-left to top-right)
+      for (let startRow = WINNING_LENGTH - 1; startRow < BOARD_SIZE; startRow++) {
+        for (let startCol = 0; startCol <= BOARD_SIZE - WINNING_LENGTH; startCol++) {
+          if (isPotentialWinningLine(startRow, startCol, -1, 1, player)) {
+            count++;
+          }
+        }
+      }
+      
+      return count;
+    }
+    
+    // Check if a line is a potential winning line (contains only the player's marks and empty cells)
+    function isPotentialWinningLine(startRow, startCol, rowInc, colInc, player) {
+      const opponent = player === 'X' ? 'O' : 'X';
+      
+      // Check if this line has no opponent marks
+      for (let i = 0; i < WINNING_LENGTH; i++) {
+        const row = startRow + i * rowInc;
+        const col = startCol + i * colInc;
+        
+        if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE || board[row][col] === opponent) {
+          return false;
+        }
+      }
+      
+      // Count player's marks in this line
+      let playerMarks = 0;
+      for (let i = 0; i < WINNING_LENGTH; i++) {
+        const row = startRow + i * rowInc;
+        const col = startCol + i * colInc;
+        
+        if (board[row][col] === player) {
+          playerMarks++;
+        }
+      }
+      
+      // It's a potential winning line if there's at least one player mark and the rest are empty
+      return playerMarks > 0 && playerMarks < WINNING_LENGTH;
+    }
+    
+    // Show game end notification
+    function showGameEndNotification(title, message) {
+      document.getElementById('gameEndTitle').textContent = title;
+      document.getElementById('gameEndMessage').textContent = message;
+      document.getElementById('gameEndNotification').style.display = 'block';
+    }
+    
+    // Close game end notification
+    function closeGameEndNotification() {
+      document.getElementById('gameEndNotification').style.display = 'none';
+    }
+    
+    // Initialize on page load
+    window.addEventListener('load', function() {
+      // Don't call init() here, it will be called when a game mode is selected
+    });
+  </script>
+</body>
+</html>
